@@ -55,6 +55,12 @@ public:
          */
         RvalueUniquePtr &operator=(const RvalueUniquePtr &other);
 
+        /**
+         *
+         * @return
+         */
+        ValueType *release();
+
     private:
         //! Делаем класс UniquePtr другом этого класса.
         friend class UniquePtr<ValueType>;
@@ -112,6 +118,8 @@ public:
      * @return Объект класса RvalueUniquePtr.
      */
     RvalueUniquePtr move();
+
+    ValueType *release();
 
     /**
      * @brief Оператор разыменования.
@@ -195,6 +203,13 @@ UniquePtr<T, D>::RvalueUniquePtr::~RvalueUniquePtr() {
 }
 
 template<class T, class D>
+typename UniquePtr<T, D>::ValueType *UniquePtr<T, D>::RvalueUniquePtr::release() {
+    ValueType *ptr = data_;
+    data_ = NULL;
+    return ptr;
+}
+
+template<class T, class D>
 typename UniquePtr<T, D>::RvalueUniquePtr
         &UniquePtr<T, D>::RvalueUniquePtr::operator=(const RvalueUniquePtr &other) {
     data_ = other.data_;
@@ -245,8 +260,14 @@ template<class T, class D>
 typename UniquePtr<T, D>::RvalueUniquePtr UniquePtr<T, D>::move() {
     RvalueUniquePtr rvalue(data_);
     data_ = NULL;
-
     return rvalue;
+}
+
+template<class T, class D>
+typename UniquePtr<T, D>::ValueType *UniquePtr<T, D>::release() {
+    ValueType *ptr = data_;
+    data_ = NULL;
+    return data_;
 }
 
 template<class T, class D>

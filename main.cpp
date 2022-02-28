@@ -4,6 +4,8 @@
 #include <list>
 #include <array>
 #include <set>
+#include <map>
+#include <memory>
 
 #include "unique_ptr.h"
 
@@ -17,7 +19,6 @@ struct Foo {
 private:
     size_t id_;
 };
-
 
 TEST(UniquePtr, CreateEmptyUniquePtr) {
     mem::UniquePtr<Foo> p;
@@ -35,6 +36,40 @@ TEST(UniquePtr, CreateMoreOneItems) {
     mem::UniquePtr<Foo> p3(p1.move());
 
     EXPECT_NE(p2->id(), p3->id());
+}
+
+TEST(UniquePtr, CheckMethodRelease) {
+    struct Baz {
+        Baz() {
+            counter()++;
+        }
+
+        ~Baz() {
+            counter()--;
+        }
+
+        static unsigned int &counter() {
+            static unsigned int counter = 0;
+            return counter;
+        }
+    };
+
+    struct XXX {
+        void operator() () {
+            typedef mem::UniquePtr<Baz> BazPtr;
+            BazPtr b1(new Baz());
+            BazPtr b2(new Baz());
+            BazPtr b3(new Baz());
+
+            EXPECT_EQ(Baz::counter(), 3);
+
+            b1.release();
+        }
+    };
+
+    XXX xxx;
+    xxx();
+    EXPECT_EQ(Baz::counter(), 1);
 }
 
 TEST(UniquePtr, WorkWithVector) {
@@ -99,14 +134,87 @@ struct CmpUniquePtr {
     }
 };
 
-TEST(UniquePtr, WorkWithSet) {
-    std::set<mem::UniquePtr<Foo>::RvalueUniquePtr, CmpUniquePtr> data;
-    mem::UniquePtr<Foo> p1(new Foo(10));
-    mem::UniquePtr<Foo> p2(new Foo(23));
+template<class T>
+struct CmpUniquePtr2 {
+    bool operator() (const std::unique_ptr<T>& a, const std::unique_ptr<T>& b) const {
+        return *a < *b;
+    }
+};
 
-    data.insert(p1.move());
-    data.insert(p2.move());
+TEST(UniquePtr, WorkWithComparator) {
+    typedef mem::UniquePtr<Foo> FooPtr;
+    FooPtr i(new Foo(10));
+    FooPtr j(new Foo(12));
+    CmpUniquePtr cmp;
+
+    EXPECT_TRUE(cmp(i.move(), j.move()));
 }
+
+TEST(UniquePtr, WorkWithSet) {
+
+    struct Baz {
+        Baz() {
+            std::cout << "Baz\n";
+        }
+        ~Baz() {
+            std::cout << "~Baz\n";
+        }
+    };
+
+    std::unique_ptr<Baz> b1(new Baz());
+    Baz* b2 = b1.release();
+
+    delete b2;
+
+//    std::set<mem::UniquePtr<Foo>::RvalueUniquePtr, CmpUniquePtr> data;
+//    mem::UniquePtr<Foo> p1(new Foo(10));
+//    mem::UniquePtr<Foo> p2(new Foo(23));
+//
+//    data.insert(p1.move());
+//    data.insert(p2.move());
+}
+
+TEST(UniquePtr, WorkWithMap) {
+    typedef mem::UniquePtr<Foo> FooPtr;
+    std::map<int, FooPtr::RvalueUniquePtr> data;
+
+    mem::UniquePtr<Foo> f1(new Foo(10));
+    mem::UniquePtr<Foo> f2(new Foo(32));
+
+    data.insert(std::pair<int, FooPtr::RvalueUniquePtr>(10, f1.move()));
+    data.insert(std::pair<int, FooPtr::RvalueUniquePtr>(12, f2.move()));
+
+    FooPtr cf1(data.find(10)->second);
+    FooPtr cf2(data.find(12)->second);
+
+    EXPECT_EQ(cf1->id(), 10); // Ok
+    EXPECT_EQ(cf2->id(), 32); // Ok
+
+    // FooPtr cf1(data[10]); // error
+    // FooPtr cf2(data[12]); // error
+
+}
+
+TEST(UniquePtr, WorkwithRef) {
+    typedef mem::UniquePtr<int> IntPtr;
+
+    struct Bar {
+        Bar(int id):
+            data_(new int(id))
+        {}
+
+        IntPtr::RvalueUniquePtr operator() () {
+            return data_.move();
+        }
+
+        IntPtr data_;
+    };
+
+    Bar bar(12);
+    IntPtr val(bar());
+    EXPECT_EQ(*val, 12);
+}
+
 
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);

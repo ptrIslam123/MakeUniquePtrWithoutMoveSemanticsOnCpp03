@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.0)
 
 project(UniquePtrWithoutMoveSemantic)
 
-# add_definitions(-std=c++98)
+#add_definitions(-std=c++98)
 
 # Locate GTest
 find_package(GTest REQUIRED)
