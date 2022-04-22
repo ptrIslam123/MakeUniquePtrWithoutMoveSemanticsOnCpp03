@@ -1,7 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <iostream>
+#include <new>
 
 namespace mem {
 
@@ -34,11 +33,11 @@ public:
     virtual ~UniquePtr();
 
     PointType release();
-    PointType get();
 
 protected:
-    explicit UniquePtr(PointType data = NULL);
+    UniquePtr(PointType data = NULL);
     PointType releaseData() const;
+    PointType get();
 
 private:
     void destroyData();
@@ -54,10 +53,10 @@ public:
     typedef D DeleterType;
     typedef UniquePtr<void, DeleterType> RvalueType;
 
-    explicit UniquePtr(PointType data = NULL);
-    explicit UniquePtr(const RvalueType &rvalue);
+    UniquePtr(PointType data = NULL);
+    UniquePtr(const RvalueType &rvalue);
 
-    UniquePtr<void, DeleterType> move();
+    RvalueType move();
 
     ValueType &operator*();
     PointType operator->();
